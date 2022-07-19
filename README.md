@@ -1,9 +1,9 @@
 > #### This fork is practically no different from the original repository, it's implements automatic building (with every fetch) via GitHub Actions with minimal changes to the source code:
 > - cheat-library/cheat-library.vcxproj: all CustomBuildStep's sections commented out - they run injector.exe after a successful build, thereby making the build duration infinite
 >
-> All changes applied to the code can be viewed in **.github/workflows/code-processing.py file.**
+> All changes applied to the code can be viewed in **.github/workflows/code-processing.py** file.
 >
-> All build steps can be viewed in **.github/workflows/msbuild.yml file.**
+> All build steps can be viewed in **.github/workflows/msbuild.yml** file.
 <p align="center">
   <a href="#"><img width="500" height="500" src="https://user-images.githubusercontent.com/67109235/176832758-7089defd-0edd-4c7a-bd69-60eeef99dca7.png"></a>
   <a href="#"><img width="690" height="133" src="https://user-images.githubusercontent.com/67109235/176832764-471a6bd5-405f-43dd-97ec-c11997880993.png"></a>
