@@ -36,7 +36,7 @@ jobs:
     - name: Upload a usually needed build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: _usually needed artifacts
+        name: _usually needed artifacts-b${{ github.run_number }}
         path: |
           bin/Release-x64/CLibrary.dll
           bin/Release-x64/injector.exe
@@ -44,5 +44,5 @@ jobs:
     - name: Upload a full build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: full artifacts
+        name: full artifacts-b${{ github.run_number }}
         path: bin/Release-x64/
