@@ -8,11 +8,17 @@
 
 namespace cheat::feature
 {
-	static void LCBaseCombat_DoHitEntity_Hook(app::LCBaseCombat* __this, uint32_t targetID, app::AttackResult* attackResult,
-		bool ignoreCheckCanBeHitInMP, MethodInfo* method);
+	//static void LCBaseCombat_DoHitEntity_Hook(app::LCBaseCombat* __this, uint32_t targetID, app::AttackResult* attackResult, bool ignoreCheckCanBeHitInMP, MethodInfo* method);
 	static void VCAnimatorEvent_HandleProcessItem_Hook(app::MoleMole_VCAnimatorEvent* __this,
 		app::MoleMole_VCAnimatorEvent_MoleMole_VCAnimatorEvent_AnimatorEventPatternProcessItem* processItem,
 		app::AnimatorStateInfo processStateInfo, app::MoleMole_VCAnimatorEvent_MoleMole_VCAnimatorEvent_TriggerMode__Enum mode, MethodInfo* method);
+	static void LCBaseCombat_FireBeingHitEvent_Hook(app::LCBaseCombat* __this, uint32_t attackeeRuntimeID, app::AttackResult* attackResult, MethodInfo* method);
+
+	static int32_t attackTags[] = {
+		1638193991, // Normal and Charged
+		1498431743, // Plunge
+		-584054938, 0, // Skill, Burst and Charged Bow Release
+	};
 
 	RapidFire::RapidFire() : Feature(),
 		NF(f_Enabled, "Attack Multiplier", "RapidFire", false),
@@ -24,10 +30,16 @@ namespace cheat::feature
 		NF(f_maxMultiplier, "Max Multiplier", "RapidFire", 3),
 		NF(f_MultiTarget, "Multi-target", "RapidFire", false),
 		NF(f_MultiTargetRadius, "Multi-target Radius", "RapidFire", 20.0f),
-		NF(f_MultiAnimation, "Multi-animation", "RapidFire", false)
+		NF(f_MultiAnimation, "Multi-animation", "RapidFire", false),
+		NF(f_AnimationMultiplier, "Animation Multiplier", "RapidFire", 100),
+		NF(f_AnimationState, "Animation State", "RapidFire", 0.5f),
+		NF(f_AttackSpeed, "Attack Speed", "RapidFire", false),
+		NF(f_SpeedMultiplier, "Speed Multiplier", "RapidFire", 1.5f),
+		animationCounter(1)
 	{
-		HookManager::install(app::MoleMole_LCBaseCombat_DoHitEntity, LCBaseCombat_DoHitEntity_Hook);
+		// HookManager::install(app::MoleMole_LCBaseCombat_DoHitEntity, LCBaseCombat_DoHitEntity_Hook); -- Looks like FireBeingHitEvent is superior to this.
 		HookManager::install(app::MoleMole_VCAnimatorEvent_HandleProcessItem, VCAnimatorEvent_HandleProcessItem_Hook);
+		HookManager::install(app::MoleMole_LCBaseCombat_FireBeingHitEvent, LCBaseCombat_FireBeingHitEvent_Hook);
 	}
 
 	const FeatureGUIInfo& RapidFire::GetGUIInfo() const
@@ -64,7 +76,7 @@ namespace cheat::feature
 			}
 			else
 			{
-				ConfigWidget("Min Multiplier", f_minMultiplier, 1, 2, 1000, "Attack count minimum multiplier.");
+				ConfigWidget("Min Multiplier", f_minMultiplier, 1, 1, 1000, "Attack count minimum multiplier.");
 				ConfigWidget("Max Multiplier", f_maxMultiplier, 1, 2, 1000, "Attack count maximum multiplier.");
 			}
 		}
@@ -84,29 +96,40 @@ namespace cheat::feature
 
 		ConfigWidget("Multi-animation", f_MultiAnimation, "Enables multi-animation attacks.\n" \
 			"Do keep in mind that the character's audio will also be spammed.");
+		ConfigWidget("Animation Multiplier", f_AnimationMultiplier, 1, 1, 150, "Configure to how many times it will update the animation state.\n" \
+			"Results can vary alongside Animation State");
+		ConfigWidget("Animation State", f_AnimationState, 0.01f, 0.f, 2.f, "Animation state to replay.\n"\
+			"Results can vary alongside Animation Multiplier");
+		ConfigWidget("Attack Speed", f_AttackSpeed, "Enables fast animation attacks.\n");
+		ConfigWidget("Speed Multiplier", f_SpeedMultiplier, 0.1f, 1.0f, 5.0f, "Attack speed multiplier.");
 	}
 
 	bool RapidFire::NeedStatusDraw() const
 	{
-		return f_Enabled && (f_MultiHit || f_MultiTarget || f_MultiAnimation);
+		return (f_Enabled && (f_MultiHit || f_MultiTarget)) || f_MultiAnimation || f_AttackSpeed;
 	}
 
 	void RapidFire::DrawStatus()
 	{
-		if (f_MultiHit)
-		{
-			if (f_Randomize)
-				ImGui::Text("Multi-Hit Random[%d|%d]", f_minMultiplier.value(), f_maxMultiplier.value());
-			else if (f_OnePunch)
-				ImGui::Text("Multi-Hit [OnePunch]");
-			else
-				ImGui::Text("Multi-Hit [%d]", f_Multiplier.value());
+		if (f_Enabled) {
+			ImGui::Text("Rapid Fire:");
+			if (f_MultiHit)
+			{
+				if (f_Randomize)
+					ImGui::Text("Multi-Hit Random[%d|%d]", f_minMultiplier.value(), f_maxMultiplier.value());
+				else if (f_OnePunch)
+					ImGui::Text("Multi-Hit [OnePunch]");
+				else
+					ImGui::Text("Multi-Hit [%d]", f_Multiplier.value());
+			}
+			if (f_MultiTarget)
+				ImGui::Text("Multi-Target [%.01fm]", f_MultiTargetRadius.value());
 		}
-		if (f_MultiTarget)
-			ImGui::Text("Multi-Target [%.01fm]", f_MultiTargetRadius.value());
 
 		if (f_MultiAnimation)
-			ImGui::Text("Multi-Animation");
+			ImGui::Text("Multi-Animation [%d|%0.2f]", f_AnimationMultiplier.value(), f_AnimationState.value());
+		if(f_AttackSpeed)
+			ImGui::Text("Attack Speed [%0.1f]", f_SpeedMultiplier.value());
 	}
 
 	RapidFire& RapidFire::GetInstance()
@@ -114,7 +137,6 @@ namespace cheat::feature
 		static RapidFire instance;
 		return instance;
 	}
-
 
 	int RapidFire::CalcCountToKill(float attackDamage, uint32_t targetID)
 	{
@@ -157,7 +179,10 @@ namespace cheat::feature
 		}
 		if (f_Randomize)
 		{
-			countOfAttacks = rand() % (f_maxMultiplier.value() - f_minMultiplier.value()) + f_minMultiplier.value();
+			if (f_minMultiplier.value() >= f_maxMultiplier.value()) 
+				countOfAttacks = f_minMultiplier.value();
+			else
+				countOfAttacks = rand() % (f_maxMultiplier.value() - f_minMultiplier.value()) + f_minMultiplier.value();
 			return countOfAttacks;
 		}
 
@@ -199,10 +224,12 @@ namespace cheat::feature
 			return false;
 
 		auto& manager = game::EntityManager::instance();
+		auto patterID = manager.avatar()->combat()->monitor;
 		auto avatarID = manager.avatar()->raw()->fields._configID_k__BackingField;
 		auto attackerID = attacker.raw()->fields._configID_k__BackingField;
+		// LOG_DEBUG("configID = %d", attackerID);
 		// Taiga#5555: IDs can be found in ConfigAbility_Avatar_*.json or GadgetExcelConfigData.json
-		bool bulletID = attackerID >= 40000160 && attackerID <= 41069999;
+		bool bulletID = attackerID >= 40000160 && attackerID <= 41079999;
 
 		return avatarID == attackerID || bulletID || attacker.type() == app::EntityType__Enum_1::Bullet;
 	}
@@ -222,8 +249,7 @@ namespace cheat::feature
 	// Raises when any entity do hit event.
 	// Just recall attack few times (regulating by combatProp)
 	// It's not tested well, so, I think, anticheat can detect it.
-	static void LCBaseCombat_DoHitEntity_Hook(app::LCBaseCombat* __this, uint32_t targetID, app::AttackResult* attackResult,
-		bool ignoreCheckCanBeHitInMP, MethodInfo* method)
+	/*static void LCBaseCombat_DoHitEntity_Hook(app::LCBaseCombat* __this, uint32_t targetID, app::AttackResult* attackResult, bool ignoreCheckCanBeHitInMP, MethodInfo* method)
 	{
 		auto attacker = game::Entity(__this->fields._._._entity);
 		RapidFire& rapidFire = RapidFire::GetInstance();
@@ -268,9 +294,55 @@ namespace cheat::feature
 				for (int i = 0; i < attackCount; i++)
 					app::MoleMole_LCBaseCombat_FireBeingHitEvent(__this, entity->runtimeID(), attackResult, method);
 			}
+			else CALL_ORIGIN(LCBaseCombat_DoHitEntity_Hook, __this, entity->runtimeID(), attackResult, ignoreCheckCanBeHitInMP, method);
 		}
 
 		CALL_ORIGIN(LCBaseCombat_DoHitEntity_Hook, __this, targetID, attackResult, ignoreCheckCanBeHitInMP, method);
+	}*/
+
+	static void LCBaseCombat_FireBeingHitEvent_Hook(app::LCBaseCombat* __this, uint32_t attackeeRuntimeID, app::AttackResult* attackResult, MethodInfo* method)
+	{
+		auto attacker = game::Entity(__this->fields._._._entity);
+		RapidFire& rapidFire = RapidFire::GetInstance();
+		if (!IsConfigByAvatar(attacker) || !IsAttackByAvatar(attacker) || !rapidFire.f_Enabled)
+			return CALL_ORIGIN(LCBaseCombat_FireBeingHitEvent_Hook, __this, attackeeRuntimeID, attackResult, method);
+
+		auto& manager = game::EntityManager::instance();
+		auto originalTarget = manager.entity(attackeeRuntimeID);
+
+		if (!IsValidByFilter(originalTarget))
+			return CALL_ORIGIN(LCBaseCombat_FireBeingHitEvent_Hook, __this, attackeeRuntimeID, attackResult, method);
+
+		std::vector<cheat::game::Entity*> validEntities;
+		validEntities.push_back(originalTarget);
+
+		if (rapidFire.f_MultiTarget)
+		{
+			auto filteredEntities = manager.entities();
+			for (const auto& entity : filteredEntities) {
+				auto distance = originalTarget->distance(entity);
+
+				if (entity->runtimeID() == manager.avatar()->runtimeID())
+					continue;
+
+				if (entity->runtimeID() == attackeeRuntimeID)
+					continue;
+
+				if (distance > rapidFire.f_MultiTargetRadius)
+					continue;
+
+				if (!IsValidByFilter(entity))
+					continue;
+
+				validEntities.push_back(entity);
+			}
+		}
+
+		for (const auto& entity : validEntities) {
+			int attackCount = rapidFire.f_MultiHit ? rapidFire.GetAttackCount(__this, entity->runtimeID(), attackResult) : 1;
+			for (int i = 0; i < attackCount; i++)
+				CALL_ORIGIN(LCBaseCombat_FireBeingHitEvent_Hook, __this, entity->runtimeID(), attackResult, method);
+		}
 	}
 
 	static void VCAnimatorEvent_HandleProcessItem_Hook(app::MoleMole_VCAnimatorEvent* __this,
@@ -279,11 +351,38 @@ namespace cheat::feature
 	{
 		auto attacker = game::Entity(__this->fields._._._entity);
 		RapidFire& rapidFire = RapidFire::GetInstance();
+		bool isAttackAnimation = std::any_of(std::begin(attackTags), std::end(attackTags),
+			[&](uint32_t tag) { return processStateInfo.m_Tag == tag; });
+		bool isAttacking = IsAttackByAvatar(attacker) && isAttackAnimation;
 
-		if (rapidFire.f_MultiAnimation && IsAttackByAvatar(attacker))
-			processItem->fields.lastTime = 0;
+		if (rapidFire.f_MultiAnimation && isAttacking)
+		{
+			// Set counter back to 1 when any new attack animation is invoked
+			if (processStateInfo.m_NormalizedTime <= 0.01f)
+				rapidFire.animationCounter = 1;
+
+			if (rapidFire.animationCounter <= rapidFire.f_AnimationMultiplier)
+			{
+				// Can be configured up to 1.0 but 0.1 to 0.9 you can barely notice the difference
+				// So 0 - 0.2 is enough.
+				processItem->fields.lastTime = (rapidFire.f_AnimationState / 10);
+				rapidFire.animationCounter++;
+			}
+		}
+
+		static bool isFastSpeed = false;
+		if (rapidFire.f_AttackSpeed && isAttacking)
+		{
+			if (!isinf(processStateInfo.m_Length))
+				app::Animator_set_speed(attacker.animator(), rapidFire.f_SpeedMultiplier, nullptr);
+			isFastSpeed = true;
+		}
+		else if (IsAttackByAvatar(attacker) && isFastSpeed) {
+			//LOG_DEBUG("Speed Reverted");
+			app::Animator_set_speed(attacker.animator(), processStateInfo.m_SpeedMultiplier, nullptr);
+			isFastSpeed = false;
+		}
 
 		CALL_ORIGIN(VCAnimatorEvent_HandleProcessItem_Hook, __this, processItem, processStateInfo, mode, method);
 	}
 }
-

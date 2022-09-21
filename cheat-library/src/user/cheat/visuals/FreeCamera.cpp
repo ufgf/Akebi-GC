@@ -1,6 +1,7 @@
 #include "pch-il2cpp.h"
 #include "FreeCamera.h"
 
+#include <math.h>
 #include <helpers.h>
 #include <cheat/events.h>
 #include <cheat/game/EntityManager.h>
@@ -18,12 +19,13 @@ namespace cheat::feature
 	app::Component_1* mainCam_Camera;
 	app::Vector3 targetPosition;
 	app::Vector3 smoothPosition;
-	float smoothFOV;
+	float smoothFOV, focalLength = 0;
 	bool isEnabled = false;
 
 	FreeCamera::FreeCamera() : Feature(),
 		NF(f_Enabled, "Free Camera", "Visuals::FreeCamera", false),
 		NF(f_FreezeAnimation, "Freeze Character Animation", "Visuals::FreeCamera", false),
+		NF(f_BlockInput, "Block Input", "Visuals::FreeCamera", false),
 		NF(f_DamageOverlay, "Damage Overlay", "Visuals::FreeCamera", false),
 		NF(f_HpOverlay, "Enemy HP Overlay", "Visuals::FreeCamera", false),
 		NF(f_Speed, "Speed", "Visuals::FreeCamera", 1.0f),
@@ -31,7 +33,10 @@ namespace cheat::feature
 		NF(f_RollSpeed, "Roll Speed", "Visuals::FreeCamera", 1.0f),
 		NF(f_FOVSpeed, "FOV Speed", "Visuals::FreeCamera", 0.1f),
 		NF(f_FOV, "Field of View", "Visuals::FreeCamera", 45.0f),
-		NF(f_Smoothing, "Smoothing", "Visuals::FreeCamera", 1.0f),
+		NF(f_MovSmoothing, "Movement Smoothing", "Visuals::FreeCamera", 1.0f),
+		NF(f_LookSmoothing, "Look Smoothing", "Visuals::FreeCamera", 1.0f),
+		NF(f_RollSmoothing, "Roll Smoothing", "Visuals::FreeCamera", 1.0f),
+		NF(f_FovSmoothing, "FOV Smoothing", "Visuals::FreeCamera", 1.0f),
 		NF(f_Forward, "Forward", "Visuals::FreeCamera", Hotkey('W')),
 		NF(f_Backward, "Backward", "Visuals::FreeCamera", Hotkey('S')),
 		NF(f_Left, "Left", "Visuals::FreeCamera", Hotkey('A')),
@@ -57,6 +62,7 @@ namespace cheat::feature
 	{
 		ConfigWidget("Enable", f_Enabled);
 		ConfigWidget("Freeze Character Animation", f_FreezeAnimation, "Freezes the active character's animation.");
+		ConfigWidget("Block User Input", f_BlockInput, "If enabled, any input will be blocked.");
 		if (f_Enabled)
 		{
 			ConfigWidget("Toggle Damage Overlay", f_DamageOverlay, "Remove damage output overlay");
@@ -74,8 +80,15 @@ namespace cheat::feature
 				ConfigWidget("Look Sensitivity", f_LookSens, 0.01f, 0.01f, 100.0f);
 				ConfigWidget("Roll Speed", f_RollSpeed, 0.01f, 0.01f, 100.0f);
 				ConfigWidget("FOV Speed", f_FOVSpeed, 0.01f, 0.01f, 100.0f);
-				ConfigWidget("Field of View", f_FOV, 0.1f, 0.01f, 200.0f);
-				ConfigWidget("Smoothing", f_Smoothing, 0.01f, 0.001f, 1.0f, "Lower = Smoother");
+				ConfigWidget("Field of View", f_FOV, 0.1f, 0.01f, 200.0f, "Changes Vertical FoV. Horizontal FoV depends on the viewport's aspect ratio");
+				if (ImGui::Button("Convert FoV to 35mm FF focal length"))
+					focalLength = 24 / (2 * tan((f_FOV * 3.14159265) / (2 * 180))); // FocalLength = (vertical) sensor size / 2 * tan( 2*(vertical) FoV * Pi / 180)  Remember to convert degree to radian.  
+				ImGui::Text("Focal length: %f", focalLength);
+				ImGui::Spacing();
+				ConfigWidget("Movement Smoothing", f_MovSmoothing, 0.01f, 0.001f, 1.0f, "Lower = Smoother");
+				ConfigWidget("Look Smoothing", f_LookSmoothing, 0.01f, 0.001f, 1.0f, "Lower = Smoother");
+				ConfigWidget("Roll Smoothing", f_RollSmoothing, 0.01f, 0.001f, 1.0f, "Lower = Smoother");
+				ConfigWidget("FOV Smoothing", f_FovSmoothing, 0.01f, 0.001f, 1.0f, "Lower = Smoother");
 			}
 			ImGui::EndGroupPanel();
 
@@ -127,11 +140,11 @@ namespace cheat::feature
 			roll = t_eulerAngles.z;
 		}
 
-		void LerpTowards(CameraRotation target, float rotationLerpPct)
+		void LerpTowards(CameraRotation target, float lookRotationLerpPct, float rollRotationLerpPct)
 		{
-			yaw = app::Mathf_Lerp(yaw, target.yaw, rotationLerpPct, nullptr);
-			pitch = app::Mathf_Lerp(pitch, target.pitch, rotationLerpPct, nullptr);
-			roll = app::Mathf_Lerp(roll, target.roll, rotationLerpPct, nullptr);
+			yaw = app::Mathf_Lerp(yaw, target.yaw, lookRotationLerpPct, nullptr);
+			pitch = app::Mathf_Lerp(pitch, target.pitch, lookRotationLerpPct, nullptr);
+			roll = app::Mathf_Lerp(roll, target.roll, rollRotationLerpPct, nullptr);
 		}
 
 		void UpdateTransform(app::Transform* t)
@@ -178,9 +191,9 @@ namespace cheat::feature
 			targetPosition = targetPosition - app::Transform_get_right(freeCam_Transform, nullptr) * settings.f_Speed;
 
 		if (settings.f_LeftRoll.value().IsPressed())
-			targetRotation.roll += settings.f_Speed;
+			targetRotation.roll += settings.f_RollSpeed;
 		if (settings.f_RightRoll.value().IsPressed())
-			targetRotation.roll -= settings.f_Speed;
+			targetRotation.roll -= settings.f_RollSpeed;
 		if (settings.f_ResetRoll.value().IsPressed())
 			targetRotation.roll = 0.0f;
 
@@ -204,11 +217,11 @@ namespace cheat::feature
 		// Commit the rotation changes to the transform
 		currentRotation.UpdateTransform(freeCam_Transform);
 
-		smoothPosition = app::Vector3_Lerp(freeCam_Transform_position, targetPosition, settings.f_Smoothing, nullptr);
+		smoothPosition = app::Vector3_Lerp(freeCam_Transform_position, targetPosition, settings.f_MovSmoothing, nullptr);
 		app::Transform_set_position(freeCam_Transform, smoothPosition, nullptr);
-		smoothFOV = app::Mathf_Lerp(app::Camera_get_fieldOfView(reinterpret_cast<app::Camera*>(freeCam_Camera), nullptr), settings.f_FOV, settings.f_Smoothing, nullptr);
+		smoothFOV = app::Mathf_Lerp(app::Camera_get_fieldOfView(reinterpret_cast<app::Camera*>(freeCam_Camera), nullptr), settings.f_FOV, settings.f_FovSmoothing, nullptr);
 		app::Camera_set_fieldOfView(reinterpret_cast<app::Camera*>(freeCam_Camera), smoothFOV, nullptr);
-		currentRotation.LerpTowards(targetRotation, settings.f_Smoothing);
+		currentRotation.LerpTowards(targetRotation, settings.f_LookSmoothing, settings.f_RollSmoothing);
 	}
 
 	void DisableFreeCam()
@@ -231,6 +244,12 @@ namespace cheat::feature
 
 	void FreeCamera::OnGameUpdate()
 	{
+		auto uiManager = GET_SINGLETON(MoleMole_UIManager);
+		if (uiManager == nullptr)
+			return;
+
+		static bool isBlock = false;
+
 		if (f_Enabled)
 		{
 			if (mainCam == nullptr)
@@ -271,6 +290,23 @@ namespace cheat::feature
 			DisableFreeCam();
 			damageOverlay = nullptr;
 			hpOverlay = nullptr;
+		}
+
+		if (f_BlockInput)
+		{
+			if (!isBlock)
+			{
+				app::MoleMole_UIManager_EnableInput(uiManager, false, false, false, nullptr);
+				isBlock = true;
+			}
+		}
+		else
+		{
+			if (isBlock)
+			{
+				app::MoleMole_UIManager_EnableInput(uiManager, true, false, false, nullptr);
+				isBlock = false;
+			}
 		}
 
 		// Taiga#5555: There's probably be a better way of implementing this. But for now, this is just what I came up with.

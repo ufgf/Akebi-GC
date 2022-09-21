@@ -101,10 +101,10 @@ namespace cheat::game::filters
 		SimpleFilter Boar = { EntityType__Enum_1::Monster, "Boar" };
 		SimpleFilter Fox = { EntityType__Enum_1::Monster, "Fox" };
 		SimpleFilter Squirrel = { EntityType__Enum_1::Monster, "Squirrel" };
-		SimpleFilter Npc = { EntityType__Enum_1::NPC, { "_Liyue", "_Mengde", "_Inazuma", "_Enkanomiya", "_Sumeru", "_Fontaine", "_Natlan", "_Snezhnaya", "_Coop", "_Quest", "_Animal", "_Guide", "_Homeworld", "_Avatar", "_Kanban", "_Monster"} };
+		SimpleFilter Npc = { EntityType__Enum_1::NPC, { "Liyue", "Mengde", "Inazuma", "Enkanomiya", "Sumeru", "Fontaine", "Aranara", "Natlan", "Snezhnaya", "Coop", "Quest", "Animal", "Guide", "Homeworld", "Avatar", "Kanban", "Monster"} };
 		SimpleFilter Crane = { EntityType__Enum_1::Monster, "Crane" };
 		SimpleFilter Falcon = { EntityType__Enum_1::Monster, "Falcon" };
-		SimpleFilter LucklightFly = { EntityType__Enum_1::EnvAnimal, "Boltbug_" };
+		SimpleFilter LucklightFly = { EntityType__Enum_1::EnvAnimal, "Boltbug_Lightbug" };
 		SimpleFilter Salamander = { EntityType__Enum_1::EnvAnimal, "Salamander" };
 		SimpleFilter DuskBird = { EntityType__Enum_1::Monster, "Pigeon_Beak" };
 		SimpleFilter Pigeon = { EntityType__Enum_1::Monster, "Pigeon_0" };
@@ -118,6 +118,7 @@ namespace cheat::game::filters
 		SimpleFilter Kitsune = { EntityType__Enum_1::EnvAnimal, "Vulpes" };
 		SimpleFilter BakeDanuki = { EntityType__Enum_1::Monster, "Inu_Tanuki" };
 		SimpleFilter Meat = { EntityType__Enum_1::GatherObject , { "_Food_BirdMeat", "_Food_Meat", "_Fishmeat" } };
+		SimpleFilter Scarab = { EntityType__Enum_1::EnvAnimal, "Scarab" };
 	}
 
 	namespace mineral
@@ -161,7 +162,7 @@ namespace cheat::game::filters
 		SimpleFilter Mitachurl = { EntityType__Enum_1::Monster, "_Brute" };
 		SimpleFilter Nobushi = { EntityType__Enum_1::Monster, "_Ronin" };
 		SimpleFilter Kairagi = { EntityType__Enum_1::Monster, "_Kairagi" };
-		SimpleFilter RuinDrake = { EntityType__Enum_1::Monster, "_Gargoyle" };
+		SimpleFilter RuinDrake = { EntityType__Enum_1::Monster, { "Gargoyle_Ground", "Gargoyle_Airborne" } };
 		SimpleFilter RuinGuard = { EntityType__Enum_1::Monster, "_Defender" };
 		SimpleFilter RuinHunter = { EntityType__Enum_1::Monster, "_Formathr" };
 		SimpleFilter RuinGrader = { EntityType__Enum_1::Monster, "_Konungmathr" };
@@ -229,6 +230,11 @@ namespace cheat::game::filters
 		SimpleFilter ShaggySumpterBeast = { EntityType__Enum_1::Monster, "_Megamoth_" };
 		SimpleFilter Spincrocodile = { EntityType__Enum_1::Monster, "_Gator" };
 		SimpleFilter SentryTurrets = { EntityType__Enum_1::Field, "SentryTurrets_" };
+		SimpleFilter AeonblightDrake = { EntityType__Enum_1::Monster, "Gargoyle_Fafnir_" };
+		SimpleFilter PrimalConstruct = { EntityType__Enum_1::Monster, "Monolith_Ordinator_" };
+		SimpleFilter SemiPerpetualControlMatrix = { EntityType__Enum_1::Monster, "Monolith_Starchild" };
+		SimpleFilter Scorpion = { EntityType__Enum_1::Monster, "Scorpion_" };
+		SimpleFilter Vulture = { EntityType__Enum_1::Monster, "Vulture_" };
 	}
 
 	namespace plant
@@ -278,12 +284,14 @@ namespace cheat::game::filters
 		SimpleFilter CarrotDrop = { EntityType__Enum_1::GatherObject, "_Plant_Radish02_Clear" };
 		SimpleFilter HarraFruit = { EntityType__Enum_1::GatherObject, "_Ligusticum" };
 		SimpleFilter KalpalataLotus = { EntityType__Enum_1::GatherObject, "_Kalpalata" };
-		SimpleFilter NilotpalaLotus = { EntityType__Enum_1::GatherObject, "_MoonLotus" };
+		SimpleFilter NilotpalaLotus = { EntityType__Enum_1::GatherObject, "_MoonLotus_" };
 		SimpleFilter Padisarah = { EntityType__Enum_1::GatherObject, "_Pasusalan" };
 		SimpleFilter RukkhashavaMushroom = { EntityType__Enum_1::GatherObject, "_HolyMushroom" };
 		SimpleFilter SumeruRose = { EntityType__Enum_1::GatherObject, "_XumiRose" };
 		SimpleFilter Viparyas = { EntityType__Enum_1::GatherObject, "_DreamerPlant" };
 		SimpleFilter ZaytunPeach = { EntityType__Enum_1::GatherObject, "_Olea" };
+		SimpleFilter Redcrest = { EntityType__Enum_1::GatherObject, "RedPearlFruit" };
+		SimpleFilter Ajilenakh = { EntityType__Enum_1::GatherObject, "DatePalm" };
 	}
 
 	namespace puzzle
@@ -311,7 +319,7 @@ namespace cheat::game::filters
 		WhitelistFilter PressurePlate = { {EntityType__Enum_1::Field, EntityType__Enum_1::Gadget }, {"Gear_Gravity", "_LitPathPlate" } };
 		SimpleFilter SealLocations = { EntityType__Enum_1::Gadget, "_RunesKey" };
 		SimpleFilter SeelieLamp = { EntityType__Enum_1::Field, {"Gear_SeeliaLamp", "LifeSeelieBase"} };
-		SimpleFilter Seelie = { EntityType__Enum_1::Platform, {"Gear_Seelie", "_LifeSeelie"}};
+		SimpleFilter Seelie = { EntityType__Enum_1::Platform, {"Gear_Seelie", "_LifeSeelie"} };
 		SimpleFilter SmallRockPile = { EntityType__Enum_1::Gadget, "_StonePile_01" };
 		SimpleFilter StormBarrier = { EntityType__Enum_1::Field, "_WindField_PushField" };
 		SimpleFilter SwordHilt = { EntityType__Enum_1::Field, "_WastedSword_" };
@@ -331,8 +339,8 @@ namespace cheat::game::filters
 		SimpleFilter SaghiraMachine = { EntityType__Enum_1::Gadget, "FatuiMaranaWell" };
 		SimpleFilter StonePillarSeal = { EntityType__Enum_1::Gadget, "GrassSealRing_" };
 		SimpleFilter TriYanaSeeds = { EntityType__Enum_1::Gadget, "XuMiVisualizationplant" };
-		SimpleFilter DendroPuzzles = { EntityType__Enum_1::Gadget, "AyusProjector" };
-		SimpleFilter DreadfulWithering = { EntityType__Enum_1::Gadget, "DeathZonePoint" };
+		SimpleFilter SumeruPuzzles = { EntityType__Enum_1::Gadget, "AyusProjector" };
+		SimpleFilter TheWithering = { EntityType__Enum_1::Gadget, "DeathZonePoint" };
 		SimpleFilter PhantasmalGate = { EntityType__Enum_1::Field, "DreamlandDoor" };
 	}
 
@@ -367,7 +375,11 @@ namespace cheat::game::filters
 			plant::MistFlowerCorolla,
 			plant::FlamingFlowerStamen
 		};
-
+		SimpleFilter BreakableObjects = {
+			puzzle::AncientRime,
+			puzzle::LargeRockPile,
+			puzzle::SmallRockPile
+		};
 		WhitelistFilter Doodads = {
 			EntityType__Enum_1::Gadget,
 			{
@@ -409,7 +421,12 @@ namespace cheat::game::filters
 			living::Squirrel,
 			living::Boar,
 			living::Weasel,
-			living::DuskBird
+			living::DuskBird,
+			monster::ShaggySumpterBeast,
+			monster::RishbolandTiger,
+			monster::Spincrocodile,
+			monster::Scorpion,
+			monster::Vulture
 		};
 		SimpleFilter AnimalPickUp = {
 			living::CrystalCore,
@@ -425,7 +442,8 @@ namespace cheat::game::filters
 			living::Starconch,
 			living::BirdEgg,
 			living::WeaselThief,
-			living::Fish
+			living::Fish,
+			living::Scarab
 		};
 		SimpleFilter AnimalNPC = {
 			living::Dog,
@@ -454,9 +472,6 @@ namespace cheat::game::filters
 			monster::WhirlingFungus,
 			monster::WingedShroom,
 			monster::GroundedShroom,
-			monster::ShaggySumpterBeast,
-			monster::RishbolandTiger,
-			monster::Spincrocodile
 		};
 		SimpleFilter MonsterElites = {
 			monster::Mitachurl,
@@ -480,7 +495,8 @@ namespace cheat::game::filters
 			monster::Geovishap,
 			monster::HydroBathysmalVishap,
 			monster::EyeOfTheStorm,
-			monster::BlackSerpentKnight
+			monster::BlackSerpentKnight,
+			monster::PrimalConstruct
 		};
 		SimpleFilter MonsterBosses = {
 			// Adding these comments for better tracking.
@@ -523,7 +539,9 @@ namespace cheat::game::filters
 			monster::ElectroBathysmalVishap,
 			// Sumeru
 			monster::ElectroRegisvine,
-			monster::JadeplumeTerrorshroom
+			monster::JadeplumeTerrorshroom,
+			monster::AeonblightDrake,
+			monster::SemiPerpetualControlMatrix
 
 		};
 		SimpleFilter MonsterShielded = {
